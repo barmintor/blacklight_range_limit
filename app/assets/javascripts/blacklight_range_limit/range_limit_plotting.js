@@ -46,7 +46,9 @@ BlacklightRangeLimit.areaChart = function areaChart(container) {
     var pointer_lookup = new Array();
     var x_ticks = new Array();
     var min = BlacklightRangeLimit.parseNum($(container).find("ul li:first-child span.from").first().data('blrlBegin'));
+    if (isNaN(min)) min = BlacklightRangeLimit.parseNum($(container).find("ul li:first-child span.single").first().data('blrlSingle'));
     var max = BlacklightRangeLimit.parseNum($(container).find("ul li:last-child span.to").first().data('blrlEnd'));
+    if (isNaN(max)) max = BlacklightRangeLimit.parseNum($(container).find("ul li:last-child span.single").first().data('blrlSingle'));
 
     $(container).find("ul li").each(function() {
         var from = BlacklightRangeLimit.parseNum($(this).find("span.from").first().data('blrlBegin'));

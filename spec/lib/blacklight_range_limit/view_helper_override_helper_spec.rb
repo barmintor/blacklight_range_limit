@@ -5,13 +5,12 @@ RSpec.describe BlacklightRangeLimit::ViewHelperOverride, type: :helper do
     before do
       allow(helper).to receive_messages(
         facet_field_label: 'Date Range',
-        remove_range_param: {},
         search_action_path: '/catalog',
         blacklight_config: CatalogController.blacklight_config,
-        search_state: {},
+        search_state: BlacklightRangeLimit::SearchState::Default.new(params, CatalogController.blacklight_config)
       )
       allow(controller).to receive_messages(
-        search_state_class: Blacklight::SearchState,
+        search_state_class: BlacklightRangeLimit::SearchState::Default,
       )
     end
 
@@ -23,7 +22,7 @@ RSpec.describe BlacklightRangeLimit::ViewHelperOverride, type: :helper do
 
     it 'renders a constraint for the given data in the range param' do
       params = ActionController::Parameters.new(
-        range: { range_field: { 'begin' => 1900, 'end' => 2000 } }
+        range: { pub_date_si: { 'begin' => 1900, 'end' => 2000 } }
       )
       constraints = helper.render_constraints_filters(params)
 
@@ -40,8 +39,12 @@ RSpec.describe BlacklightRangeLimit::ViewHelperOverride, type: :helper do
     before do
       allow(helper).to receive_messages(
         facet_field_label: 'Date Range',
+        search_action_path: '/catalog',
         blacklight_config: CatalogController.blacklight_config,
-        search_state: {},
+        search_state: BlacklightRangeLimit::SearchState::Default.new(params, CatalogController.blacklight_config)
+      )
+      allow(controller).to receive_messages(
+        search_state_class: BlacklightRangeLimit::SearchState::Default,
       )
     end
 
@@ -53,7 +56,7 @@ RSpec.describe BlacklightRangeLimit::ViewHelperOverride, type: :helper do
 
     it 'renders a constraint for the given data in the range param' do
       params = ActionController::Parameters.new(
-        range: { range_field: { 'begin' => 1900, 'end' => 2000 } }
+        range: { pub_date_si: { 'begin' => 1900, 'end' => 2000 } }
       )
       constraints = helper.render_search_to_s_filters(params)
 
@@ -132,6 +135,33 @@ RSpec.describe BlacklightRangeLimit::ViewHelperOverride, type: :helper do
           'field_name2' => { 'begin' => '1800', 'end' => '1900' }
         }
       )
+    end
+    describe '#remove_range_param' do
+      let(:params) { ActionController::Parameters.new(q: 'blah', range: range_params) }
+      let(:other_range_field) { 'other_date_si' }
+      let(:range_field) { 'pub_date_si' }
+      let(:range_params) { { range_field => { 'begin' => 1900, 'end' => 2000 } } }
+      before do
+        allow(controller).to receive_messages(
+          search_state_class: BlacklightRangeLimit::SearchState::Default
+        )
+        allow(helper).to receive_messages(
+          blacklight_config: CatalogController.blacklight_config,
+          params: params
+        )
+      end
+      it 'removes the specified range param if present' do
+        expect(helper.send(:remove_range_param, range_field)).to eql(
+          {
+            'q' => 'blah'
+          }
+        )
+      end
+      it 'does nothing if specified range param if absent' do
+        expect(helper.send(:remove_range_param, other_range_field)).to eql(
+          params.permit!.to_h
+        )
+      end
     end
   end
 end

@@ -12,7 +12,7 @@ module RangeLimitHelper
   def render_range_input(solr_field, type, input_label = nil, maxlength=4)
     type = type.to_s
 
-    default = params["range"][solr_field][type] if params["range"] && params["range"][solr_field] && params["range"][solr_field][type]
+    default = params.dig("range", solr_field, type)
 
     html = number_field_tag("range[#{solr_field}][#{type}]", default, :maxlength=>maxlength, :class => "form-control text-center range_#{type}")
     html += label_tag("range[#{solr_field}][#{type}]", input_label, class: 'sr-only visually-hidden') if input_label.present?
@@ -34,31 +34,8 @@ module RangeLimitHelper
   end
 
   def range_display(solr_field, my_params = params)
-    return "" unless my_params[:range] && my_params[:range][solr_field]
-
-    hash = my_params[:range][solr_field]
-
-    if hash["missing"]
-      return t('blacklight.range_limit.missing')
-    elsif hash["begin"] || hash["end"]
-      if hash["begin"] == hash["end"]
-        return t(
-          'blacklight.range_limit.single_html',
-          begin: format_range_display_value(hash['begin'], solr_field),
-          begin_value: hash['begin']
-        )
-      else
-        return t(
-          'blacklight.range_limit.range_html',
-          begin: format_range_display_value(hash['begin'], solr_field),
-          begin_value: hash['begin'],
-          end: format_range_display_value(hash['end'], solr_field),
-          end_value: hash['end']
-        )
-      end
-    end
-
-    ''
+    value = search_state.filter(solr_field).values.first || {}
+    format_range_display_value(value, solr_field)
   end
 
   ##
@@ -66,11 +43,7 @@ module RangeLimitHelper
   # label might be displayed to a user. By default it just returns the value
   # as rendered by the presenter
   def format_range_display_value(value, solr_field)
-    if respond_to?(:facet_item_presenter)
-      facet_item_presenter(facet_configuration_for_field(solr_field), value, solr_field).label
-    else
-      facet_display_value(solr_field, value)
-    end
+    facet_item_presenter(facet_configuration_for_field(solr_field), value, solr_field).label
   end
 
   # Show the limit area if:
@@ -81,14 +54,14 @@ module RangeLimitHelper
   def should_show_limit(solr_field)
     stats = stats_for_field(solr_field)
 
-    (params["range"] && params["range"][solr_field]) ||
+    (params.dig("range", solr_field)) ||
     (  stats &&
       stats["max"] > stats["min"]) ||
     ( !stats  && @response.total > 0 )
   end
 
   def stats_for_field(solr_field)
-    @response["stats"]["stats_fields"][solr_field] if @response["stats"] && @response["stats"]["stats_fields"]
+    @response.dig("stats", "stats_fields", solr_field)
   end
 
   def stats_for_field?(solr_field)
@@ -96,44 +69,23 @@ module RangeLimitHelper
   end
 
   def add_range_missing(solr_field, my_params = params)
-    my_params = Blacklight::SearchState.new(my_params.except(:page), blacklight_config).to_h
-    my_params["range"] ||= {}
-    my_params["range"][solr_field] ||= {}
-    my_params["range"][solr_field]["missing"] = "true"
-
-    my_params
+    my_params = search_state.reset(my_params.except(:page))
+    my_params.filter(solr_field).add(Blacklight::SearchState::FilterField::MISSING).to_h
   end
 
   def add_range(solr_field, from, to, my_params = params)
-    my_params = Blacklight::SearchState.new(my_params.except(:page), blacklight_config).to_h
-    my_params["range"] ||= {}
-    my_params["range"][solr_field] ||= {}
-
-    my_params["range"][solr_field]["begin"] = from
-    my_params["range"][solr_field]["end"] = to
-    my_params["range"][solr_field].delete("missing")
-
-    # eliminate temporary range status params that were just
-    # for looking things up
-    my_params.delete("range_field")
-    my_params.delete("range_start")
-    my_params.delete("range_end")
-
-    return my_params
+    my_params = search_state.reset(my_params.except(:page))
+    from = '*' unless from.present?
+    to = '*' unless to.present?
+    my_params.filter(solr_field).add((from.to_s..to.to_s)).to_h
   end
 
   def has_selected_range_limit?(solr_field)
-    params["range"] &&
-    params["range"][solr_field] &&
-    (
-      params["range"][solr_field]["begin"].present? ||
-      params["range"][solr_field]["end"].present? ||
-      params["range"][solr_field]["missing"]
-    )
+    search_state.filter(solr_field).values.present?
   end
 
   def selected_missing_for_range_limit?(solr_field)
-    params["range"] && params["range"][solr_field] && params["range"][solr_field]["missing"]
+    search_state.filter(solr_field).values.include? Blacklight::SearchState::FilterField::MISSING
   end
 
 end

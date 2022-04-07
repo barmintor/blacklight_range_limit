@@ -8,6 +8,7 @@ describe "Blacklight Range Limit" do
     expect(page).to have_selector 'input.range_end'
     expect(page).to have_selector 'label.sr-only[for="range_pub_date_si_begin"]', :text => 'Publication Date Sort range begin'
     expect(page).to have_selector 'label.sr-only[for="range_pub_date_si_end"]', :text => 'Publication Date Sort range end'
+    click_on 'Publication Date Sort'
     expect(page).to have_button 'Apply'
   end
 
@@ -15,8 +16,12 @@ describe "Blacklight Range Limit" do
     visit search_catalog_path
     click_link 'View distribution'
 
-    expect(page).to have_content("1500 to 1599 0")
-    expect(page).to have_content("2000 to 2008 12")
+    # puts page.body
+    expect(page).to have_selector('a.facet-select', text: "1500 to 1599")
+    c16 = page.find('a.facet-select', text: "1500 to 1599")
+    expect(c16.ancestor('li')).to have_selector('span.facet-count', text: "0")
+    c21 = page.find('a.facet-select', text: "2000 to 2008")
+    expect(c21.ancestor('li')).to have_selector('span.facet-count', text: "12")
   end
 
   it "should limit appropriately" do

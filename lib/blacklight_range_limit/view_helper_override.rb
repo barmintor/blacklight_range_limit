@@ -11,54 +11,36 @@
       super
     end
 
-    def query_has_constraints?(my_params = params)
-      super || has_range_limit_parameters?(my_params)
+    def render_constraints_filters(params_or_search_state = params)
+      Deprecation.warn(Blacklight::RenderConstraintsHelperBehavior, 'render_constraints_filters is deprecated')
+      search_state = convert_to_search_state(params_or_search_state)
+      # this line is the only departure from Blacklight 7.x, which checks explicitly for the key 'f' rather than filters
+      return "".html_safe if search_state.filters.blank?
+
+      safe_join(search_state.filters.map do |field|
+        render_filter_element(field.key, field.values, search_state)
+      end, "\n")
     end
 
-    # Over-ride to recognize our custom params for range facets
-    def facet_field_in_params?(field_name)
-      return super || (
-        range_config(field_name) &&
-        params[:range] &&
-        params[:range][field_name] &&
-          ( params[:range][field_name]["begin"].present? ||
-            params[:range][field_name]["end"].present? ||
-            params[:range][field_name]["missing"].present?
-          )
-      )
+    def render_search_to_s_filters(params_or_search_state = params)
+      Deprecation.warn(Blacklight::RenderConstraintsHelperBehavior, 'render_search_to_s_filters is deprecated')
+      search_state = convert_to_search_state(params_or_search_state)
+      return "".html_safe if search_state.filters.blank?
+
+      safe_join(search_state.filters.map do |field|
+        render_search_to_s_element(facet_field_label(field.key),
+                                   safe_join(field.values.collect do |value|
+                                     facet_item_presenter(field.config, value, field.key).label
+                                   end,
+                                   tag.span(" #{t('blacklight.and')} ", class: 'filter-separator')))
+        end, " \n ")
     end
 
-    def render_constraints_filters(my_params = params)
-      # add a constraint for ranges?
-      range_params(my_params).keys.each_with_object(super) do |solr_field, content|
-        content << render_constraint_element(
-          facet_field_label(solr_field),
-          range_display(solr_field, my_params),
-          escape_value: false,
-          remove: search_action_path(remove_range_param(solr_field, my_params))
-        )
-      end
-    end
-
-    def render_search_to_s_filters(my_params)
-      # add a constraint for ranges?
-      range_params(my_params).keys.each_with_object(super) do |solr_field, content|
-        content << render_search_to_s_element(
-          facet_field_label(solr_field),
-          range_display(solr_field, my_params),
-          escape_value: false
-        )
-      end
-    end
-
-    def remove_range_param(solr_field, my_params = params)
-      my_params = Blacklight::SearchState.new(my_params, blacklight_config).to_h
-      if ( my_params["range"] )
-        my_params = my_params.dup
-        my_params["range"] = my_params["range"].dup
-        my_params["range"].delete(solr_field)
-      end
-      return my_params
+    def remove_range_param(solr_field, params_or_search_state = params)
+      search_state = convert_to_search_state(params_or_search_state)
+      filter = search_state.filter(solr_field)
+      return search_state.params unless filter.values.present?
+      filter.remove(filter.values.first).params
     end
 
     # Looks in the solr @response for ["facet_counts"]["facet_queries"][solr_field], for elements
@@ -72,11 +54,10 @@
 
       @response["facet_counts"]["facet_queries"].each_pair do |query, count|
         if query =~ /#{solr_field}: *\[ *(-?\d+) *TO *(-?\d+) *\]/
-          array << {:from => $1, :to => $2, :count => count}
+          array << { value: ($1..$2), count: count, hits: count}
         end
       end
-      array = array.sort_by {|hash| hash[:from].to_i }
-
+      array = array.sort_by {|hash| hash[:value].first.to_i }
       return array
     end
 

@@ -5,6 +5,8 @@ module BlacklightRangeLimit
   require 'blacklight_range_limit/controller_override'
   require 'blacklight_range_limit/view_helper_override'
 
+  require 'blacklight_range_limit/search_state'
+
   require 'blacklight_range_limit/version'
   require 'blacklight_range_limit/engine'
 

@@ -35,8 +35,8 @@ describe 'JavaScript', js: true do
     it 'should show the range limit with set boundaries' do
       visit '/catalog'
       click_button 'Publication Date Sort'
-      expect(page).to have_field :range_pub_date_si_begin, with: '1990'
-      expect(page).to have_field :range_pub_date_si_end, with: '2000'
+      expect(page).to have_field 'Publication Date Sort range begin', with: '1990'
+      expect(page).to have_field 'Publication Date Sort range end', with: '2000'
     end
   end
 

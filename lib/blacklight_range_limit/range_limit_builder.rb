@@ -12,51 +12,40 @@ module BlacklightRangeLimit
 
     # Method added to to fetch proper things for date ranges.
     def add_range_limit_params(solr_params)
-       ranged_facet_configs =
-         blacklight_config.facet_fields.select { |key, config| config.range }
-       # In ruby 1.8, hash.select returns an array of pairs, in ruby 1.9
-       # it returns a hash. Turn it into a hash either way.
-       ranged_facet_configs = Hash[ ranged_facet_configs ] unless ranged_facet_configs.kind_of?(Hash)
+      ranged_facet_configs =
+        blacklight_config.facet_fields.select { |key, config| config.range }
+      # In ruby 1.8, hash.select returns an array of pairs, in ruby 1.9
+      # it returns a hash. Turn it into a hash either way.
+      ranged_facet_configs = Hash[ ranged_facet_configs ] unless ranged_facet_configs.kind_of?(Hash)
 
-       ranged_facet_configs.each_pair do |field_key, config|
+      ranged_facet_configs.each_pair do |field_key, config|
         solr_params["stats"] = "true"
         solr_params["stats.field"] ||= []
         solr_params["stats.field"] << config.field
 
         range_config = BlacklightRangeLimit.range_config(blacklight_config, config.field)
+        next if range_config[:segments] == false
 
-        hash =  blacklight_params["range"] && blacklight_params["range"][field_key] ?
-          blacklight_params["range"][field_key] :
-          {}
-
-        if !hash["missing"].blank?
-          # missing specified in request params
-          solr_params[:fq] ||= []
-          solr_params[:fq] << "-#{config.field}:[* TO *]"
-
-        elsif !(hash["begin"].blank? && hash["end"].blank?)
-          # specified in request params, begin and/or end, might just have one
-          start = hash["begin"].blank? ? "*" : hash["begin"]
-          finish = hash["end"].blank? ? "*" : hash["end"]
-
-          solr_params[:fq] ||= []
-          solr_params[:fq] << "#{config.field}: [#{start} TO #{finish}]"
-
-          if (range_config[:segments] != false && start != "*" && finish != "*")
-            # Add in our calculated segments, can only do with both boundaries.
-            add_range_segments_to_solr!(solr_params, field_key, start.to_i, finish.to_i)
-          end
-
-        elsif (range_config[:segments] != false &&
-               boundaries = range_config[:assumed_boundaries])
-          # assumed_boundaries in config
-          add_range_segments_to_solr!(solr_params, field_key, boundaries[0], boundaries[1])
-        end
+        filter = search_state.filter(field_key)
+        filter_value = filter.values.first
+        boundaries = filter_value.blank? ? range_config[:assumed_boundaries] : boundaries_from_value(filter_value)
+        add_range_segments_to_solr!(solr_params, field_key, boundaries[0], boundaries[1]) if boundaries
       end
 
-      return solr_params
+      solr_params
     end
 
+    # @param [Range, Blacklight::SearchState::FilterField::MISSING] filter_value
+    # @return [Array<Integer>, FalseClass]
+    def boundaries_from_value(filter_value)
+      return false if filter_value == Blacklight::SearchState::FilterField::MISSING
+      start = filter_value.first
+      finish = filter_value.last
+      if (start != "*" && finish != "*")
+        return [start.to_i, finish.to_i]
+      end
+      false
+    end
 
     # Another processing method, this one is NOT included in default processing chain,
     # it is specifically swapped in *instead of* add_range_limit_params for

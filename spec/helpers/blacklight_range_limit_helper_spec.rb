@@ -17,20 +17,28 @@ describe "Blacklight Range Limit Helper" do
   end
 
   context "when building requests" do
-    let(:config) { Blacklight::Configuration.new }
+    let(:config) {
+      Blacklight::Configuration.new.tap do |config|
+        config.add_facet_field field_key, range: true
+        config.default_solr_params[:'facet.field'] = config.facet_fields.keys
+      end
+     }
+    let(:params) { { q: '', page: '2' } }
+    let(:search_state) { Blacklight::SearchState.new(params, config, controller) }
+    let(:field_key) { 'test_si' }
+
     before do
       allow(helper).to receive(:blacklight_config).and_return(config)
+      allow(helper).to receive_messages(search_state: search_state)
     end
 
     it "should exclude page when adding a range" do
-      params = { q: '', page: '2' }
-      updated_params = helper.add_range('test', '1900', '1995', params)
+      updated_params = helper.add_range(field_key, '1900', '1995', params)
       expect(updated_params).not_to include(:page)
     end
 
     it "should exclude page when adding a missing range" do
-      params = { q: '', page: '2' }
-      updated_params = helper.add_range_missing('test', params)
+      updated_params = helper.add_range_missing(field_key, params)
       expect(updated_params).not_to include(:page)
     end
   end

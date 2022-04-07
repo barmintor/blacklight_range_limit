@@ -11,7 +11,18 @@ module BlacklightRangeLimit
       helper RangeLimitHelper
       helper_method :has_range_limit_parameters?
     end
+    module ClassMethods
+      def configure_blacklight(*args, &block)
+        blacklight_config.configure(*args, &block)
 
+        blacklight_config.facet_fields.each do |key, facet_field|
+          next unless facet_field.range
+          # set range facet default configs
+          facet_field.item_presenter ||= BlacklightRangeLimit::FacetItemPresenter
+          facet_field.filter_class ||= BlacklightRangeLimit::SearchState::FilterField
+        end
+      end
+    end
     # Action method of our own!
     # Delivers a _partial_ that's a display of a single fields range facets.
     # Used when we need a second Solr query to get range facets, after the
@@ -27,11 +38,6 @@ module BlacklightRangeLimit
         search_builder.except(:add_range_limit_params).append(:fetch_specific_range_limit)
       end
       render('blacklight_range_limit/range_segments', :locals => {:solr_field => params[:range_field]}, :layout => !request.xhr?)
-    end
-
-    # over-ride, call super, but make sure our range limits count too
-    def has_search_parameters?
-      super || has_range_limit_parameters?
     end
 
     def has_range_limit_parameters?(my_params = params)
