@@ -21,6 +21,8 @@ Capybara.register_driver :headless_chrome do |app|
   Capybara::Selenium::Driver.new(app, browser: :chrome, options: browser_options)
 end
 
+Dir[Pathname.new(File.expand_path('support/**/*.rb', __dir__))].sort.each { |f| require f }
+
 RSpec.configure do |config|
   # rspec-rails 3 will no longer automatically infer an example group's spec type
   # from the file location. You can explicitly opt-in to the feature using this
@@ -32,4 +34,5 @@ RSpec.configure do |config|
   #       # Equivalent to being in spec/controllers
   #     end
   config.infer_spec_type_from_file_location!
+  config.include PresenterTestHelpers, type: :presenter
 end
