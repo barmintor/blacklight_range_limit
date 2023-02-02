@@ -16,7 +16,10 @@ class TestAppGenerator < Rails::Generators::Base
 
   def run_blacklight_range_limit_generator
     say_status("warning", "GENERATING BL", :yellow)
-
+    if defined?(Propshaft)
+      run "yarn add blacklight-range-limit@file:../"
+    elsif defined?(Importmap)
+    end
     generate 'blacklight_range_limit:install'
   end
 

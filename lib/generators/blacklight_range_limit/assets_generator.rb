@@ -1,49 +1,21 @@
-# Copy BlacklightRangeLimit assets to public folder in current app.
-# If you want to do this on application startup, you can
-# add this next line to your one of your environment files --
-# generally you'd only want to do this in 'development', and can
-# add it to environments/development.rb:
-#       require File.join(BlacklightRangeLimit.root, "lib", "generators", "blacklight", "assets_generator.rb")
-#       BlacklightRangeLimit::AssetsGenerator.start(["--force", "--quiet"])
-
-
-# Need the requires here so we can call the generator from environment.rb
-# as suggested above.
 require 'rails/generators'
 require 'rails/generators/base'
 module BlacklightRangeLimit
   class AssetsGenerator < Rails::Generators::Base
-    source_root File.join(BlacklightRangeLimit::Engine.root, 'app', 'assets')
+    class_option :'bootstrap-version', type: :string, default: ENV.fetch('BOOTSTRAP_VERSION', '~> 5.1'), desc: "Set the generated app's bootstrap version"
 
-    def assets
-      application_css = Dir["app/assets/stylesheets/application{.css,.scss,.css.scss}"].first
+    def run_asset_pipeline_specific_generator
+      generated_options = "--bootstrap-version='#{options[:'bootstrap-version']}'" if options[:'bootstrap-version']
 
-      if application_css
+      generator = if defined?(Propshaft)
+                    'blacklight_range_limit:assets:propshaft'
+                  elsif defined?(Importmap)
+                    'blacklight_range_limit:assets:importmap'
+                  elsif defined?(Sprockets)
+                    'blacklight_range_limit:assets:sprockets'
+                  end
 
-        insert_into_file application_css, :before => "*/" do
-%q{
- *
- * Used by blacklight_range_limit
- *= require  'blacklight_range_limit'
- *
-}
-        end
-      else
-        say_status "warning", "Can not find application.css, did not insert our require", :red
-      end
-
-      append_to_file "app/assets/javascripts/application.js" do
-%q{
-
-// For blacklight_range_limit built-in JS, if you don't want it you don't need
-// this:
-//= require 'blacklight_range_limit'
-
-}
-      end
+      generate generator, generated_options if generator
     end
-
-
-
   end
 end
