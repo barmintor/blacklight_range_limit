@@ -11,6 +11,7 @@ module BlacklightRangeLimit
         append_to_file 'app/assets/stylesheets/application.bootstrap.scss' do
           <<~CONTENT
             @import "blacklight-range-limit/app/assets/stylesheets/blacklight_range_limit/blacklight_range_limit";
+            @import "blacklight-range-limit/vendor/assets/stylesheets/slider";
           CONTENT
         end
 

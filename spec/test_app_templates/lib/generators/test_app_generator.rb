@@ -14,12 +14,14 @@ class TestAppGenerator < Rails::Generators::Base
     generate 'blacklight:install', '--devise'
   end
 
+  def add_local_assets_for_propshaft
+    return unless defined?(Propshaft)
+
+    run "yarn add #{BlacklightRangeLimit::Engine.root}"
+  end
+
   def run_blacklight_range_limit_generator
     say_status("warning", "GENERATING BL", :yellow)
-    if defined?(Propshaft)
-      run "yarn add blacklight-range-limit@file:../"
-    elsif defined?(Importmap)
-    end
     generate 'blacklight_range_limit:install'
   end
 

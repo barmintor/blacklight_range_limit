@@ -1,13 +1,16 @@
-require 'rails/generators'
+# frozen_string_literal: true
 
 module BlacklightRangeLimit
   class InstallGenerator < Rails::Generators::Base
     source_root File.expand_path('../templates', __FILE__)
 
     class_option :'builder-path', type: :string, default: 'app/models/search_builder.rb', aliases: "-b", desc: "Set the path, relative to Rails root, to the Blacklight app's search builder class"
+    class_option :'skip-assets', type: :boolean, default: false, desc: "Skip generating javascript and css assets into the application"
 
     def copy_public_assets
-      generate 'blacklight_range_limit:assets'
+      generated_options = "--bootstrap-version='#{options[:'bootstrap-version']}'" if options[:'bootstrap-version']
+
+      generate "blacklight_range_limit:assets", generated_options unless options[:'skip-assets']
     end
 
     def install_catalog_controller_mixin

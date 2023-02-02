@@ -23,6 +23,9 @@ Gemfile.lock
 
 /spec/internal
 .internal_test_app
+node_modules/*
+package-lock.json
+yarn.lock
 /jetty
 /pkg
 /tmp
