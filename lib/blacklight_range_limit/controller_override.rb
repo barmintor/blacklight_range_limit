@@ -4,7 +4,6 @@
 require 'blacklight_range_limit/segment_calculation'
 module BlacklightRangeLimit
   module ControllerOverride
-    extend Deprecation
     extend ActiveSupport::Concern
 
     RANGE_LIMIT_FIELDS = [:range_end, :range_field, :range_start].freeze
@@ -17,14 +16,14 @@ module BlacklightRangeLimit
           fields = blacklight_config.facet_fields.select { |_k, v| v.range && !v.had_existing_component_configuration }
 
           fields.each_value do |facet_config|
-            Deprecation.warn(BlacklightRangeLimit, 'Found partial blacklight_range_limit/range_limit_panel, so falling back to legacy behavior.') unless facet_config.partial
+            BlacklightRangeLimit.deprecation.warn(BlacklightRangeLimit, 'Found partial blacklight_range_limit/range_limit_panel, so falling back to legacy behavior.') unless facet_config.partial
             facet_config.partial ||= 'blacklight_range_limit/range_limit_panel'
             facet_config.component = nil
           end
         else
           fields = blacklight_config.facet_fields.select { |_k, v| v.partial == 'blacklight_range_limit/range_limit_panel' }
           fields.each_value do |facet_config|
-            Deprecation.warn(BlacklightRangeLimit, 'Ignoring partial configuration for missing blacklight_range_limit/range_limit_panel partial')
+            BlacklightRangeLimit.deprecation.warn(BlacklightRangeLimit, 'Ignoring partial configuration for missing blacklight_range_limit/range_limit_panel partial')
             facet_config.partial = nil
           end
         end
@@ -63,7 +62,7 @@ module BlacklightRangeLimit
     end
 
     def range_limit_panel
-      Deprecation.warn(BlacklightRangeLimit::ControllerOverride, 'range_limit_panel is deprecated; use the normal facet modal route instead')
+      BlacklightRangeLimit.deprecation.warn(BlacklightRangeLimit::ControllerOverride, 'range_limit_panel is deprecated; use the normal facet modal route instead')
       facet
     end
 

@@ -37,7 +37,7 @@ module BlacklightRangeLimit
       if view_context.method(:format_range_display_value).owner == RangeLimitHelper
         value
       else
-        Deprecation.warn(BlacklightRangeLimit, 'Helper method #format_range_display_value has been overridden; implement a custom FacetItemPresenter instead')
+        BlacklightRangeLimit.deprecation.warn(BlacklightRangeLimit, 'Helper method #format_range_display_value has been overridden; implement a custom FacetItemPresenter instead')
         view_context.format_range_display_value(value, key)
       end
     end
